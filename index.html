@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>계좌번호 복사</title>
+  <style>
+    :root{--bg:#fff;--accent:#0b76ef;--ok:#2bb673;--muted:#666}
+    html,body{height:100%;margin:0;font-family: Apple SD Gothic Neo, "Noto Sans KR", "Helvetica Neue", Arial; background:var(--bg); color:#111}
+    .wrap{min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;box-sizing:border-box;}
+    .card{width:100%;max-width:420px;padding:24px;border-radius:14px;box-shadow:0 6px 20px rgba(0,0,0,0.06);text-align:center;}
+    h1{margin:0 0 8px;font-size:20px}
+    p.bank{margin:0 0 12px;font-size:18px;font-weight:600}
+    .account{font-size:22px;letter-spacing:1px;margin-bottom:18px}
+    .notice{color:var(--muted);font-size:13px;margin-bottom:18px}
+    .btn{display:inline-block;padding:12px 18px;border-radius:10px;background:var(--accent);color:#fff;text-decoration:none;font-weight:600;box-shadow:0 6px 14px rgba(11,118,239,0.18);}
+    .btn.secondary{background:#f2f6fb;color:var(--accent);box-shadow:none;border:1px solid #e6eefc}
+    .status{margin-top:14px;font-size:15px}
+    .small{font-size:12px;color:var(--muted);margin-top:8px}
+    .hidden{display:none}
+    footer{margin-top:18px;font-size:12px;color:var(--muted)}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card" role="main">
+      <h1>계좌번호 복사</h1>
+      <p class="bank" id="bankName">국민은행</p>
+      <div class="account" id="accountText">123456-12-123456</div>
+
+      <div id="status" class="status"></div>
+
+      <div id="controls" class="">
+        <button id="manualCopy" class="btn" style="margin-top:12px">직접 복사하기</button>
+        <button id="openPay" class="btn secondary hidden" style="margin-left:10px">송금앱에서 열기</button>
+      </div>
+
+      <div class="small">송금을 완료한 후 매장 직원에게 송금 화면을 보여주세요</div>
+    </div>
+
+    <footer>QR 스캔 → 복사 → 송금앱에 붙여넣기</footer>
+  </div>
+
+<script>
+(function(){
+  // 여기만 바꾸세요.
+  const bankName = "우리은행 / 이은혜 영웨이브 전자담배";
+  const accountText = "1005-304-519742";
+  // -----------------------
+
+  document.getElementById('bankName').textContent = bankName;
+  document.getElementById('accountText').textContent = accountText;
+
+  const statusEl = document.getElementById('status');
+  const manualBtn = document.getElementById('manualCopy');
+
+  function showStatus(msg, ok){
+    statusEl.textContent = msg;
+    statusEl.style.color = ok ? 'var(--ok)' : '';
+  }
+
+  // 시도 1: modern clipboard API (비동기)
+  function tryClipboardAPI(text){
+    if (!navigator.clipboard || !navigator.clipboard.writeText) return Promise.reject(new Error('no-clipboard-api'));
+    return navigator.clipboard.writeText(text);
+  }
+
+  // 시도 2: execCommand fallback (동기)
+  function tryExecCommand(text){
+    return new Promise((resolve, reject) => {
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        // 모바일에서 textarea가 화면에 보이면 키보드 올라오기 때문에 off-screen 위치로 둠
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        const ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+        if (ok) resolve();
+        else reject(new Error('execCommand-failed'));
+      } catch (e){
+        reject(e);
+      }
+    });
+  }
+
+  function copyAll(text){
+    // 먼저 clipboard API
+    return tryClipboardAPI(text)
+      .catch(()=> tryExecCommand(text));
+  }
+
+  // 수동 복사 버튼
+  manualBtn.addEventListener('click', () => {
+    copyAll(accountText).then(()=>{
+      showStatus('계좌번호가 복사되었습니다 ✅', true);
+    }).catch(()=>{
+      // 최종 대체: 선택하여 복사하도록 텍스트 에리어를 보여주기
+      const ta = document.createElement('textarea');
+      ta.value = accountText;
+      ta.style.width = '100%';
+      ta.style.fontSize = '16px';
+      ta.style.padding = '12px';
+      document.querySelector('.card').appendChild(ta);
+      ta.select();
+      showStatus('텍스트를 선택한 뒤 길게 눌러 복사하세요.', false);
+    });
+  });
+  // 페이지 로드 시 상태 메시지 초기화
+  showStatus('아래 버튼을 탭하여 계좌번호를 복사하세요.', false);
+
+})();
+</script>
+</body>
+</html>
