@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>계좌번호 복사</title>
+  <style>
+    :root{--bg:#fff;--accent:#0b76ef;--ok:#2bb673;--muted:#666}
+    html,body{height:100%;margin:0;font-family:Apple SD Gothic Neo, "Noto Sans KR", "Helvetica Neue", Arial; background:var(--bg); color:#111}
+    .wrap{min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;box-sizing:border-box;}
+    .card{width:100%;max-width:420px;padding:24px;border-radius:14px;box-shadow:0 6px 20px rgba(0,0,0,0.06);text-align:center;}
+    h1{margin:0 0 8px;font-size:20px}
+    .bank{margin:0 0 12px;font-size:18px;font-weight:600}
+    .account{display:none;} /* 계좌번호 화면에 표시 안 함 */
+    .btn{display:inline-block;padding:18px 24px;border-radius:14px;background:var(--accent);color:#fff;text-decoration:none;font-weight:600;font-size:20px;box-shadow:0 6px 14px rgba(11,118,239,0.18);}
+    .status{margin-top:14px;font-size:15px}
+    .small{font-size:12px;color:var(--muted);margin-top:8px}
+    footer{margin-top:18px;font-size:12px;color:var(--muted)}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card" role="main">
+      <h1>계좌번호 복사</h1>
+      <p class="bank">우리은행 / 이은혜 영웨이브 전자담배</p>
+      <div class="account" id="accountText">1005-304-519742</div>
+
+      <div id="status" class="status">아래 버튼을 눌러 계좌번호를 복사하세요.</div>
+
+      <button id="manualCopy" class="btn">계좌번호 복사하기</button>
+
+      <div class="small">송금을 완료한 후 매장 직원에게 송금 화면을 보여주세요</div>
+    </div>
+
+    <footer>QR 스캔 → 복사 → 송금앱에 붙여넣기</footer>
+  </div>
+
+<script>
+(function(){
+  const accountText = "1005-304-519742";
+  const statusEl = document.getElementById('status');
+  const manualBtn = document.getElementById('manualCopy');
+
+  function showStatus(msg, ok){
+    statusEl.textContent = msg;
+    statusEl.style.color = ok ? 'var(--ok)' : '';
+  }
+
+  function tryClipboardAPI(text){
+    if (!navigator.clipboard || !navigator.clipboard.writeText) return Promise.reject(new Error('no-clipboard-api'));
+    return navigator.clipboard.writeText(text);
+  }
+
+  function tryExecCommand(text){
+    return new Promise((resolve, reject) => {
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        const ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+        if (ok) resolve();
+        else reject(new Error('execCommand-failed'));
+      } catch (e){
+        reject(e);
+      }
+    });
+  }
+
+  function copyAll(text){
+    return tryClipboardAPI(text)
+      .catch(()=> tryExecCommand(text));
+  }
+
+  manualBtn.addEventListener('click', () => {
+    copyAll(accountText).then(()=>{
+      showStatus('계좌번호가 복사되었습니다 ✅', true);
+    }).catch(()=>{
+      const ta = document.createElement('textarea');
+      ta.value = accountText;
+      ta.style.width = '100%';
+      ta.style.fontSize = '16px';
+      ta.style.padding = '12px';
+      document.querySelector('.card').appendChild(ta);
+      ta.select();
+      showStatus('텍스트를 선택한 뒤 길게 눌러 복사하세요.', false);
+    });
+  });
+
+  // QR 접속 안전 검증
+  const urlParams = new URLSearchParams(window.location.search);
+  const qrToken = urlParams.get('qr'); // QR코드에 포함된 토큰 예: ?qr=12345
+
+  if(!qrToken || qrToken !== "12345"){ // 토큰 값은 QR코드 생성 시 맞춰서 변경
+    document.body.innerHTML = "<p style='text-align:center;margin-top:50px;font-size:18px;color:red;'>QR코드로만 접근 가능합니다.</p>";
+  }
+
+})();
+</script>
+</body>
+</html>
